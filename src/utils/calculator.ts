@@ -22,7 +22,7 @@ const sigmoid = (x: number): number => {
   return 1 / (1 + Math.exp(-x));
 };
 
-// Calculate confidence score based on comparison with min or median score
+// Calculate confidence score based on comparison with lower quarter or median score
 const calculateConfidence = (
   userScore: number,
   program: Program,
@@ -32,7 +32,7 @@ const calculateConfidence = (
 ): number => {
   // Calculate base confidence using sigmoid
   const sensitivity = 1.5;
-  // Use minimum score for Band A mode, median score otherwise
+  // Use lower quarter score for Band A mode, median score otherwise
   const compareScore = isFirstPriority ? program.minBest5 : program.medianBest5;
   const x = (userScore - compareScore) / sensitivity;
   let confidence = sigmoid(x) * 100;
@@ -58,13 +58,13 @@ const calculateConfidence = (
   return Math.round(confidence);
 };
 
-// Calculate Band A probability based on score gap from minimum requirements
+// Calculate Band A probability based on score gap from lower quarter
 const calculateBandAProbability = (scoreGap: number): number => {
-  if (scoreGap >= 2) return 100; // Significantly above minimum
-  if (scoreGap >= 1) return 75;  // Comfortably above minimum
-  if (scoreGap >= 0) return 50;  // Just meeting minimum
-  if (scoreGap >= -1) return 25; // Slightly below minimum
-  return 0;                      // Well below minimum
+  if (scoreGap >= 2) return 100; // Significantly above lower quarter
+  if (scoreGap >= 1) return 75;  // Comfortably above lower quarter
+  if (scoreGap >= 0) return 50;  // Meeting lower quarter
+  if (scoreGap >= -1) return 25; // Slightly below lower quarter
+  return 0;                      // Well below lower quarter
 };
 
 // Generate recommendation based on prediction and mode
@@ -80,15 +80,15 @@ const generateRecommendation = (
   
   if (isFirstPriority) {
     if (scoreGap >= 2) {
-      return "You're well above the minimum requirements for Band A consideration. Strong position for admission.";
+      return "You're well above the lower quarter for Band A consideration. Strong position for admission.";
     } else if (scoreGap >= 1) {
-      return "You're comfortably above the minimum requirements for Band A. Focus on maintaining performance.";
+      return "You're comfortably above the lower quarter for Band A. Focus on maintaining performance.";
     } else if (scoreGap >= 0) {
-      return "You meet the minimum requirements for Band A consideration. Consider strengthening your position.";
+      return "You meet the lower quarter requirements for Band A consideration. Consider strengthening your position.";
     } else if (scoreGap >= -1) {
-      return "You're close to meeting Band A requirements. Small improvements could make a difference.";
+      return "You're close to meeting Band A lower quarter requirements. Small improvements could make a difference.";
     } else {
-      return "Consider improving your grades to meet the minimum requirements for Band A consideration.";
+      return "Consider improving your grades to meet the lower quarter requirements for Band A consideration.";
     }
   }
   
@@ -268,7 +268,7 @@ export const determineLikelihood = (
   isFirstPriority: boolean
 ): LikelihoodStatus => {
   if (isFirstPriority) {
-    // For Band A mode, use score gap from minimum requirements
+    // For Band A mode, use score gap from lower quarter
     if (scoreGap >= 1) return 'Likely';
     if (scoreGap >= 0) return 'Borderline';
     return 'Unlikely';
@@ -310,7 +310,7 @@ export const calculateAdmissionLikelihood = (
     hasMissingRequirements
   );
   
-  // Compare with minimum score in Band A mode, median score otherwise
+  // Compare with lower quarter score in Band A mode, median score otherwise
   const compareScore = isFirstPriority ? program.minBest5 : program.medianBest5;
   const scoreGap = totalScore - compareScore;
   
