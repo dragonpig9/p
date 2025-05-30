@@ -32,8 +32,8 @@ const calculateConfidence = (
 ): number => {
   // Calculate base confidence using sigmoid
   const sensitivity = 1.5;
-  // Use lower quarter score for Band A mode, median score otherwise
-  const compareScore = isFirstPriority ? program.minBest5 : program.medianBest5;
+  // Always compare with minBest5 in first priority mode
+  const compareScore = program.minBest5;
   const x = (userScore - compareScore) / sensitivity;
   let confidence = sigmoid(x) * 100;
   
@@ -310,9 +310,8 @@ export const calculateAdmissionLikelihood = (
     hasMissingRequirements
   );
   
-  // Compare with lower quarter score in Band A mode, median score otherwise
-  const compareScore = isFirstPriority ? program.minBest5 : program.medianBest5;
-  const scoreGap = totalScore - compareScore;
+  // Always calculate score gap against minBest5 (lower quarter) in Band A mode
+  const scoreGap = totalScore - program.minBest5;
   
   // Calculate confidence score
   const confidence = calculateConfidence(
