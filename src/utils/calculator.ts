@@ -22,7 +22,7 @@ const sigmoid = (x: number): number => {
   return 1 / (1 + Math.exp(-x));
 };
 
-// Calculate confidence score
+// Calculate confidence score based on comparison with min or median score
 const calculateConfidence = (
   userScore: number,
   program: Program,
@@ -32,8 +32,8 @@ const calculateConfidence = (
 ): number => {
   // Calculate base confidence using sigmoid
   const sensitivity = 1.5;
-  // Always compare with minimum score in first priority mode
-  const compareScore = program.minBest5;
+  // Use minimum score for Band A mode, median score otherwise
+  const compareScore = isFirstPriority ? program.minBest5 : program.medianBest5;
   const x = (userScore - compareScore) / sensitivity;
   let confidence = sigmoid(x) * 100;
   
@@ -58,7 +58,7 @@ const calculateConfidence = (
   return Math.round(confidence);
 };
 
-// Calculate Band A probability based on score gap
+// Calculate Band A probability based on score gap from minimum requirements
 const calculateBandAProbability = (scoreGap: number): number => {
   if (scoreGap >= 2) return 100; // Significantly above minimum
   if (scoreGap >= 1) return 75;  // Comfortably above minimum
@@ -67,7 +67,7 @@ const calculateBandAProbability = (scoreGap: number): number => {
   return 0;                      // Well below minimum
 };
 
-// Generate recommendation based on prediction
+// Generate recommendation based on prediction and mode
 const generateRecommendation = (
   scoreGap: number,
   confidence: number,
@@ -261,21 +261,23 @@ export const checkElectiveRequirements = (
   return missingReqs;
 };
 
-// Determine likelihood based on score gap and confidence
+// Determine likelihood based on score gap and mode
 export const determineLikelihood = (
   scoreGap: number, 
   confidence: number, 
   isFirstPriority: boolean
 ): LikelihoodStatus => {
   if (isFirstPriority) {
+    // For Band A mode, use score gap from minimum requirements
     if (scoreGap >= 1) return 'Likely';
     if (scoreGap >= 0) return 'Borderline';
     return 'Unlikely';
+  } else {
+    // For standard mode, use confidence levels
+    if (confidence >= 75) return 'Likely';
+    if (confidence >= 40) return 'Borderline';
+    return 'Unlikely';
   }
-  
-  if (confidence >= 75) return 'Likely';
-  if (confidence >= 40) return 'Borderline';
-  return 'Unlikely';
 };
 
 // Main prediction function
@@ -308,11 +310,11 @@ export const calculateAdmissionLikelihood = (
     hasMissingRequirements
   );
   
-  // In first priority mode, always compare with minimum score
+  // Compare with minimum score in Band A mode, median score otherwise
   const compareScore = isFirstPriority ? program.minBest5 : program.medianBest5;
   const scoreGap = totalScore - compareScore;
   
-  // Calculate confidence score with penalty for missing requirements
+  // Calculate confidence score
   const confidence = calculateConfidence(
     totalScore, 
     program, 
@@ -321,13 +323,13 @@ export const calculateAdmissionLikelihood = (
     isFirstPriority
   );
   
-  // Determine likelihood status based on confidence and priority mode
+  // Determine likelihood status
   const status = determineLikelihood(scoreGap, confidence, isFirstPriority);
   
-  // Calculate admission probability
+  // Calculate admission probability based on mode
   const probability = isFirstPriority
     ? calculateBandAProbability(scoreGap) // Use 25% increments for Band A
-    : Math.min(100, Math.max(0, confidence + (scoreGap * 5)));
+    : Math.min(100, Math.max(0, confidence + (scoreGap * 5))); // Standard calculation
   
   // Generate recommendation
   const recommendation = generateRecommendation(
